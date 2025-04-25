@@ -4,11 +4,6 @@ import http from 'http';
 import cors from 'cors';
 
 import mongoConnect from './database/mongo';
-import userRoute from './routes/userRoute';
-import sosRoute from './routes/sosRoute';
-import bookingRoute from './routes/bookingRoute';
-import chatRoute from './routes/chatRoute';
-import serviceUserRoute from './routes/service/serviceUserRoute';
 
 const app = express();
 const server = http.createServer(app)
@@ -31,9 +26,3 @@ server.listen(port, () => {
 app.get("/",(req:any,res:any)=>{
     res.send("Server is UP!!!")
 });
-
-app.use('/v1/user', userRoute);
-app.use('/v1/sos', sosRoute);
-app.use('/v1/bookings', bookingRoute);
-app.use('/v1/chat', chatRoute);
-app.use('/v1/service-user', serviceUserRoute);
