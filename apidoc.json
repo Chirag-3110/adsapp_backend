@@ -1,0 +1,14 @@
+{
+    "name": "Taxi App Api Doc",
+    "version": "1.0.0",
+    "description": "API Documentation",
+    "title": "Taxi App Apis",
+    "url": "http://13.218.169.17:3000", 
+    "template": {
+      "withCompare": false,
+      "forceLanguage": "en"
+    },
+    "sampleUrl": "http://13.218.169.17:3000",
+    "output": "apidoc",
+    "input": "./src/routes"
+}  
