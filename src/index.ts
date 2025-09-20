@@ -2,8 +2,11 @@ require('dotenv').config();
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
+import db from './database/sqlConnect';
+import userRoute from './routes/user';
+import earningRoute from './routes/earnings';
+import transactionRoute from './routes/transaction';
 
-import mongoConnect from './database/mongo';
 
 const app = express();
 const server = http.createServer(app)
@@ -20,9 +23,17 @@ app.use('/docs', express.static('apidoc'));
 
 server.listen(port, () => {
     console.log(`Server started at port ${port}`);
-    mongoConnect();
 });
 
-app.get("/",(req:any,res:any)=>{
-    res.send("Server is UP!!!")
+app.get("/",async(req:any,res:any)=>{
+    try {
+        const [rows] = await db.query('SELECT DATABASE() AS currentDatabase');        
+        res.send(`DB connected! Test result: ${(rows as any)[0].currentDatabase}`);
+    } catch (err: any) {
+        res.status(500).send(`DB connection failed: ${err.message}`);
+    }
 });
+
+app.use('/api/user', userRoute);
+app.use('/api/earnings', earningRoute);
+app.use('/api/transactions', transactionRoute);
