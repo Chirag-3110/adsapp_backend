@@ -221,3 +221,86 @@ export const deleteUser = async (req: any, res: any) => {
     connection.release();
   }
 };
+
+export const userAnalytics = async (req: any, res: any) => {
+  try {
+    const userId = req.user.id;
+
+    const [todayEarnings]: any = await db.query(
+      `SELECT COALESCE(SUM(pointsEarned), 0) as todayPoints
+       FROM Earning
+       WHERE userId = ? AND DATE(createdAt) = CURDATE()`,
+      [userId]
+    );
+
+    const [weekEarnings]: any = await db.query(
+      `SELECT COALESCE(SUM(pointsEarned), 0) as weekPoints
+       FROM Earning
+       WHERE userId = ? AND YEARWEEK(createdAt, 1) = YEARWEEK(CURDATE(), 1)`,
+      [userId]
+    );
+
+    const [monthEarnings]: any = await db.query(
+      `SELECT COALESCE(SUM(pointsEarned), 0) as monthPoints
+       FROM Earning
+       WHERE userId = ? 
+         AND YEAR(createdAt) = YEAR(CURDATE())
+         AND MONTH(createdAt) = MONTH(CURDATE())`,
+      [userId]
+    );
+
+    const [todayTransactions]: any = await db.query(
+      `SELECT 
+         COALESCE(SUM(pointsRedeemed), 0) as todayPointsRedeemed,
+         COALESCE(SUM(amountRedeemed), 0) as todayAmountRedeemed
+       FROM Transaction
+       WHERE userId = ? AND DATE(createdAt) = CURDATE()`,
+      [userId]
+    );
+
+    const [weekTransactions]: any = await db.query(
+      `SELECT 
+         COALESCE(SUM(pointsRedeemed), 0) as weekPointsRedeemed,
+         COALESCE(SUM(amountRedeemed), 0) as weekAmountRedeemed
+       FROM Transaction
+       WHERE userId = ? AND YEARWEEK(createdAt, 0) = YEARWEEK(CURDATE(), 0)`,
+      [userId]
+    );
+
+    // const [weekTransactionRows] = await db.query(
+    //   `SELECT 
+    //     COALESCE(SUM(pointsRedeemed), 0) as weekPointsRedeemed,
+    //      COALESCE(SUM(amountRedeemed), 0) as weekAmountRedeemed
+    //   FROM Transaction WHERE userId = ? AND createdAt >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)`,
+    //   [userId]
+    // );
+
+    const [monthTransactions]: any = await db.query(
+      `SELECT 
+         COALESCE(SUM(pointsRedeemed), 0) as monthPointsRedeemed,
+         COALESCE(SUM(amountRedeemed), 0) as monthAmountRedeemed
+       FROM Transaction
+       WHERE userId = ? 
+         AND YEAR(createdAt) = YEAR(CURDATE())
+         AND MONTH(createdAt) = MONTH(CURDATE())`,
+      [userId]
+    );
+
+    return buildObjectResponse(res, {
+      message: "User analytics fetched successfully",
+      earnings: {
+        today: todayEarnings[0].todayPoints,
+        week: weekEarnings[0].weekPoints,
+        month: monthEarnings[0].monthPoints,
+      },
+      transactions: {
+        today: todayTransactions[0],
+        week: weekTransactions[0],
+        month: monthTransactions[0],
+      },
+    });
+  } catch (error: any) {
+    console.error("Error fetching user analytics:", error);
+    return buildErrorResponse(res, constants.errors.internalServerError, 500);
+  }
+};
