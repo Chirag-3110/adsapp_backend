@@ -191,9 +191,9 @@ export const createUser = async (req: any, res: any) => {
     const { name, phone, dob, gender } = req.body;
     
     const profileImage = req.file ? `/uploads/profileImages/${req.file.filename}` : null;
-  console.log(req.body,userId)
+  
     if (!name || !phone || !dob || !gender ) {
-      return buildErrorResponse(res, "All fields (name, phone, dob, gender, profileImage) are required", 400);
+      return buildErrorResponse(res, "All fields (name, phone, dob, gender are required", 400);
     }
 
     const [rows] = await db.query("SELECT * FROM User WHERE id = ?", [userId]);
@@ -206,7 +206,7 @@ export const createUser = async (req: any, res: any) => {
       SET name = ?, phone = ?, dob = ?, gender = ?, profileImage = ?
       WHERE id = ?
     `;
-    await db.query(sql, [name, phone, new Date(), gender, profileImage, userId]);
+    await db.query(sql, [name, phone, dob, gender, profileImage, userId]);
 
     return buildObjectResponse(res, {
       message: constants.success.profileCompleted,
