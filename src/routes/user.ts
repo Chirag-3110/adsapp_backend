@@ -1,5 +1,5 @@
 import express from 'express';
-import { createUser, deleteUser, getUserDetails, login, updateUser, userAnalytics } from '../controller/user';
+import { createUser, deleteUser, getUserDetails, login, signupUser, updateUser, userAnalytics } from '../controller/user';
 import { uploadProfileImage } from '../middleware/uploadMiddleware';
 const { verifyToken } = require('../middleware/auth');
 
@@ -87,25 +87,40 @@ userRoute.put("/update-profile", verifyToken, uploadProfileImage.single('profile
  */
 userRoute.delete("/delete-user", verifyToken, deleteUser);
 /**
- * @api {post} /api/user/signup-user Signup User
- * @apiName CreateUser
+ * @api {put} /api/user/complete-profile Complete User Profile
+ * @apiName CompleteUserProfile
  * @apiGroup User
  *
- * @apiBody {String} name User's name
- * @apiBody {String} email User's email
- * @apiBody {String} password User's password
- * @apiBody {String} phone User's phone number
- * @apiBody {String} [dob] Date of birth
- * @apiBody {String} [gender] User's gender
- * @apiBody {File} profileImage User's profile image (mandatory, send in files)
+ * @apiHeader {String} Authorization User's JWT token (Bearer token)
  *
- * @apiSuccess {String} message Account created successfully
- * @apiSuccess {Object} user User details
- * @apiSuccess {Object} wallet Wallet details
+* @apiBody {String} name User's full name (required)
+ * @apiBody {String} phone User's phone number (required)
+ * @apiBody {String} dob Date of birth (required, format: YYYY-MM-DD)
+ * @apiBody {String="male","female","other"} gender User's gender (required)
+ * @apiBody {File} profileImage User's profile image (required, send in files)
+ *
+ * @apiSuccess {String} message Profile completed successfully
+ * @apiSuccess {Object} user Copmleted user details
  *
  * @apiError {String} error Error message
  */
-userRoute.post("/signup-user", uploadProfileImage.single('profileImage'), createUser);
+userRoute.put("/complete-profile", verifyToken, uploadProfileImage.single('profileImage'), createUser);
+
+/**
+ * @api {post} /api/user/signup Signup User
+ * @apiName SignupUser
+ * @apiGroup User
+ *
+ * @apiBody {String} email User's email
+ * @apiBody {String} password User's password
+ *
+ * @apiSuccess {String} message Account created successfully
+ * @apiSuccess {Object} user User details with id and email
+ * @apiSuccess {Object} wallet Wallet created for the user
+ *
+ * @apiError {String} error Error message
+ */
+userRoute.post("/signup", signupUser);
 /**
  * @api {get} /api/user/get-user-analytics Get User Earning & Transaction Analytics
  * @apiName UserAnalytics

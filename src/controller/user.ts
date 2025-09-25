@@ -3,6 +3,7 @@ import { generateJWT } from "../utils";
 import { buildErrorResponse, buildObjectResponse } from "../utils/responseUtils";
 import db from '../database/sqlConnect';
 import bcrypt from 'bcrypt';
+import { log } from "util";
 
 export const login = async (req: any, res: any) => {
   try {
@@ -132,14 +133,13 @@ export const updateUser = async (req: any, res: any) => {
   }
 };
 
-export const createUser = async (req: any, res: any) => {
+export const signupUser = async (req: any, res: any) => {
   const connection = await db.getConnection();
- try {
-    const { name, email, phone, dob, gender, password } = req.body;
-    const profileImage = req.file ? req.file.filename : null;
+  try {
+    const { email, password } = req.body;
 
-    if (!name || !email || !password || !profileImage || !phone) {
-      return buildErrorResponse(res, constants.errors.invalidRequest, 400);
+    if (!email || !password) {
+      return buildErrorResponse(res, constants.errors.emailPassReq, 400);
     }
 
     const [existing] = await connection.query("SELECT * FROM User WHERE email = ?", [email]);
@@ -152,8 +152,8 @@ export const createUser = async (req: any, res: any) => {
     await connection.beginTransaction();
 
     const [userResult]: any = await connection.query(
-      `INSERT INTO User (name, email, phone, dob, gender, profileImage, password) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [name, email, phone || null, dob || null, gender || null, profileImage, hashedPassword]
+      `INSERT INTO User (email, password) VALUES (?, ?)`,
+      [email, hashedPassword]
     );
     const userId = userResult.insertId;
 
@@ -165,23 +165,15 @@ export const createUser = async (req: any, res: any) => {
 
     await connection.commit();
 
+    const token = generateJWT({ id: userId, email });
+
     return buildObjectResponse(res, {
       message: constants.success.accountCreated,
+      token,
       user: {
         id: userId,
-        name,
         email,
-        phone,
-        dob,
-        gender,
-        profileImage,
       },
-      wallet: {
-        id: walletId,
-        userId,
-        totalPoints: 0,
-        totalAmountRedeemed: 0,
-      }
     });
 
   } catch (error: any) {
@@ -189,6 +181,48 @@ export const createUser = async (req: any, res: any) => {
     return buildErrorResponse(res, constants.errors.internalServerError, 500);
   } finally {
     connection.release();
+  }
+};
+
+
+export const createUser = async (req: any, res: any) => {
+ try {
+    const userId = req.user.id; 
+    const { name, phone, dob, gender } = req.body;
+    
+    const profileImage = req.file ? `/uploads/profileImages/${req.file.filename}` : null;
+  console.log(req.body,userId)
+    if (!name || !phone || !dob || !gender ) {
+      return buildErrorResponse(res, "All fields (name, phone, dob, gender, profileImage) are required", 400);
+    }
+
+    const [rows] = await db.query("SELECT * FROM User WHERE id = ?", [userId]);
+    if ((rows as any[]).length === 0) {
+      return buildErrorResponse(res, constants.errors.userNotFound, 404);
+    }
+
+    const sql = `
+      UPDATE User 
+      SET name = ?, phone = ?, dob = ?, gender = ?, profileImage = ?
+      WHERE id = ?
+    `;
+    await db.query(sql, [name, phone, new Date(), gender, profileImage, userId]);
+
+    return buildObjectResponse(res, {
+      message: constants.success.profileCompleted,
+      user: {
+        id: userId,
+        name,
+        phone,
+        dob,
+        gender,
+        profileImage,
+      }
+    });
+
+  } catch (error: any) {
+    console.error("Error completing profile:", error);
+    return buildErrorResponse(res, constants.errors.internalServerError, 500);
   }
 };
 

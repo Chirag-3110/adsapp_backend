@@ -7,7 +7,8 @@ const constants = {
     accountCreated:"Account created successfully",
     earningRecordAdded: "Earning record added successfully",
     earningList: "User earnings fetched successfully",
-    pointsRedemed:"Points redeemed successfully"
+    pointsRedemed:"Points redeemed successfully",
+    profileCompleted:'Profiole completed successfully'
   },
   errors: {
     emailPassReq: 'Email and password required',
