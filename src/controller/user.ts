@@ -152,8 +152,8 @@ export const signupUser = async (req: any, res: any) => {
     await connection.beginTransaction();
 
     const [userResult]: any = await connection.query(
-      `INSERT INTO User (email, password) VALUES (?, ?)`,
-      [email, hashedPassword]
+      `INSERT INTO User (email, password, isRegistered) VALUES (?, ?, ?)`,
+      [email, hashedPassword, 0]
     );
     const userId = userResult.insertId;
 
@@ -197,13 +197,14 @@ export const createUser = async (req: any, res: any) => {
     }
 
     const [rows] = await db.query("SELECT * FROM User WHERE id = ?", [userId]);
+    const user: any = rows as any[];
     if ((rows as any[]).length === 0) {
       return buildErrorResponse(res, constants.errors.userNotFound, 404);
     }
 
     const sql = `
       UPDATE User 
-      SET name = ?, phone = ?, dob = ?, gender = ?, profileImage = ?
+      SET name = ?, phone = ?, dob = ?, gender = ?, profileImage = ? isRegistered = 1, 
       WHERE id = ?
     `;
     await db.query(sql, [name, phone, dob, gender, profileImage, userId]);
@@ -217,6 +218,7 @@ export const createUser = async (req: any, res: any) => {
         dob,
         gender,
         profileImage,
+        email: user.email,
       }
     });
 
