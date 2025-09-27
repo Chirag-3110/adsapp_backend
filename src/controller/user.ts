@@ -42,6 +42,7 @@ export const login = async (req: any, res: any) => {
         accountDetailsId: user.accountDetailsId,
         dob: user.dob,
         createdAt: user.createdAt,
+        isRegistered: user.isRegistered
       },
     });
 
