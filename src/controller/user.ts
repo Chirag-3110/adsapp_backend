@@ -205,7 +205,7 @@ export const createUser = async (req: any, res: any) => {
 
     const sql = `
       UPDATE User 
-      SET name = ?, phone = ?, dob = ?, gender = ?, profileImage = ?, isRegistered = ?, 
+      SET name = ?, phone = ?, dob = ?, gender = ?, profileImage = ?, isRegistered = ?
       WHERE id = ?
     `;
     await db.query(sql, [name, phone, dob, gender, profileImage, 1, userId]);
