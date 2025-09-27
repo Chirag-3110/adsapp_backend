@@ -6,7 +6,7 @@ import db from './database/sqlConnect';
 import userRoute from './routes/user';
 import earningRoute from './routes/earnings';
 import transactionRoute from './routes/transaction';
-
+import path from 'path';
 
 const app = express();
 const server = http.createServer(app)
@@ -19,7 +19,7 @@ app.use(express.urlencoded({
     extended: true
 }));
 app.use('/docs', express.static('apidoc'));
-
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 server.listen(port, () => {
     console.log(`Server started at port ${port}`);
