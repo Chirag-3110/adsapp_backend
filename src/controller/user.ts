@@ -61,10 +61,14 @@ export const getUserDetails = async (req: any, res: any) => {
     const users = rows as any[];
 
     if (users.length === 0) {
-      return buildErrorResponse(res, constants.errors.invalidCredentials, 404);
+      return buildErrorResponse(res, "User not found", 404);
     }
 
     const user = users[0];
+    const [walletRows] = await db.query("SELECT * FROM Wallet WHERE userId = ?", [userId]);
+    const wallets = walletRows as any[];
+
+    const wallet = wallets.length > 0 ? wallets[0] : null;
 
     return buildObjectResponse(res, {
       user: {
@@ -78,6 +82,7 @@ export const getUserDetails = async (req: any, res: any) => {
         dob: user.dob,
         createdAt: user.createdAt,
       },
+      wallet
     });
   } catch (error: any) {
     return buildErrorResponse(res, constants.errors.internalServerError, 500);
