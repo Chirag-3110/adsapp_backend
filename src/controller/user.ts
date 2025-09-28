@@ -323,7 +323,7 @@ export const userAnalytics = async (req: any, res: any) => {
 
      const [latestTransactions]: any = await db.query(
       `SELECT *
-       FROM transaction
+       FROM Transaction
        WHERE userId = ? AND status = 'COMPLETED'
        ORDER BY createdAt DESC
        LIMIT 5`,
