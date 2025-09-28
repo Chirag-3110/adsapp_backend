@@ -296,7 +296,7 @@ export const userAnalytics = async (req: any, res: any) => {
          COALESCE(SUM(pointsRedeemed), 0) as todayPointsRedeemed,
          COALESCE(SUM(amountRedeemed), 0) as todayAmountRedeemed
        FROM Transaction
-       WHERE userId = ? AND DATE(createdAt) = CURDATE()`,
+       WHERE userId = ? AND DATE(createdAt) = CURDATE() AND status = 'COMPLETED'`,
       [userId]
     );
 
@@ -305,17 +305,9 @@ export const userAnalytics = async (req: any, res: any) => {
          COALESCE(SUM(pointsRedeemed), 0) as weekPointsRedeemed,
          COALESCE(SUM(amountRedeemed), 0) as weekAmountRedeemed
        FROM Transaction
-       WHERE userId = ? AND YEARWEEK(createdAt, 0) = YEARWEEK(CURDATE(), 0)`,
+       WHERE userId = ? AND YEARWEEK(createdAt, 0) = YEARWEEK(CURDATE(), 0) AND status = 'COMPLETED'`,
       [userId]
     );
-
-    // const [weekTransactionRows] = await db.query(
-    //   `SELECT 
-    //     COALESCE(SUM(pointsRedeemed), 0) as weekPointsRedeemed,
-    //      COALESCE(SUM(amountRedeemed), 0) as weekAmountRedeemed
-    //   FROM Transaction WHERE userId = ? AND createdAt >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)`,
-    //   [userId]
-    // );
 
     const [monthTransactions]: any = await db.query(
       `SELECT 
@@ -324,7 +316,17 @@ export const userAnalytics = async (req: any, res: any) => {
        FROM Transaction
        WHERE userId = ? 
          AND YEAR(createdAt) = YEAR(CURDATE())
-         AND MONTH(createdAt) = MONTH(CURDATE())`,
+         AND MONTH(createdAt) = MONTH(CURDATE())
+         AND status = 'COMPLETED'`,
+      [userId]
+    );
+
+     const [latestTransactions]: any = await db.query(
+      `SELECT *
+       FROM transaction
+       WHERE userId = ? AND status = 'COMPLETED'
+       ORDER BY createdAt DESC
+       LIMIT 5`,
       [userId]
     );
 
@@ -340,6 +342,7 @@ export const userAnalytics = async (req: any, res: any) => {
         week: weekTransactions[0],
         month: monthTransactions[0],
       },
+      latestTransactions: latestTransactions
     });
   } catch (error: any) {
     console.error("Error fetching user analytics:", error);

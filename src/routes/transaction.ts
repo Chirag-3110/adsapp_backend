@@ -1,35 +1,79 @@
 import express from 'express';
-import { listTransactions, redeemPoints } from '../controller/transaction';
+import { listPendingTransactions, listTransactions, redeemPoints, requestRedeemPoints } from '../controller/transaction';
 const { verifyToken } = require('../middleware/auth');
 
 const transactionRoute = express.Router();
 
 /**
- * @api {post} /api/transactions/add-new-transactionn Redeem Points
- * @apiName RedeemPoints
+ * @api {put} /api/transactions/handle-transaction-request Handle Transaction Request
+ * @apiName HandleTransactionRequest
+ * @apiGroup Transaction
+ *
+ * @apiHeader {String} Authorization Admin's access token in Bearer format
+ *
+ * @apiBody {Number} transactionId Transaction ID to handle
+ * @apiBody {String="APPROVE","CANCEL"} action Action to perform (approve or cancel)
+ *
+ * @apiSuccess {String} message Transaction updated successfully
+ * @apiSuccess {Object} transaction Updated transaction details
+ *
+ * @apiError {String} error Error message
+ * @apiErrorExample {json} TransactionNotFound:
+ *     HTTP/1.1 404 Not Found
+ *     {
+ *       "error": "Transaction not found"
+ *     }
+ * @apiErrorExample {json} InvalidAction:
+ *     HTTP/1.1 400 Bad Request
+ *     {
+ *       "error": "Invalid action. Use APPROVE or CANCEL."
+ *     }
+ * @apiErrorExample {json} InsufficientFunds:
+ *     HTTP/1.1 400 Bad Request
+ *     {
+ *       "error": "Insufficient funds in wallet to approve transaction"
+ *     }
+ */
+transactionRoute.put("/handle-transaction-request", verifyToken, redeemPoints);
+
+/**
+ * @api {post} /api/transactions/add-transaction-request Request Redeem Points
+ * @apiName RequestRedeemPoints
  * @apiGroup Transaction
  *
  * @apiHeader {String} Authorization User's access token in Bearer format
  *
  * @apiBody {Number} pointsRedeemed Number of points user wants to redeem
  * @apiBody {Number} amountRedeemed Amount corresponding to the points
+ * @apiBody {String} phone User's phone number
+ * @apiBody {String} upiId UPI ID for redeem
  *
- * @apiSuccess {String} message Points redeemed successfully
+ * @apiSuccess {String} message Redeem request submitted successfully
  * @apiSuccess {Number} transactionId ID of the created transaction
  *
  * @apiError {String} error Error message
- * @apiErrorExample {json} InsufficientPoints:
- *     HTTP/1.1 400 Bad Request
- *     {
- *       "error": "Insufficient funds"
- *     }
  * @apiErrorExample {json} WalletNotFound:
  *     HTTP/1.1 404 Not Found
  *     {
  *       "error": "Wallet not found"
  *     }
+ * @apiErrorExample {json} InsufficientFunds:
+ *     HTTP/1.1 400 Bad Request
+ *     {
+ *       "error": "Insufficient funds"
+ *     }
+ * @apiErrorExample {json} DataIsRequired:
+ *     HTTP/1.1 400 Bad Request
+ *     {
+ *       "error": "All fields are required"
+ *     }
+ * @apiErrorExample {json} InternalServerError:
+ *     HTTP/1.1 500 Internal Server Error
+ *     {
+ *       "error": "Something went wrong, please try again later"
+ *     }
  */
-transactionRoute.post("/add-new-transaction", verifyToken, redeemPoints);
+transactionRoute.post("/add-transaction-request", verifyToken, requestRedeemPoints);
 
 /**
  * @api {get} /api/transactions/user-transactions List User Transactions
@@ -50,5 +94,28 @@ transactionRoute.post("/add-new-transaction", verifyToken, redeemPoints);
  */
 
 transactionRoute.get("/user-transactions", verifyToken, listTransactions);
+
+/**
+ * @api {get} /api/transactions/pending-transactions List Pending Transactions
+ * @apiName ListPendingTransactions
+ * @apiGroup Admin
+ *
+ * @apiHeader {String} Authorization Admin's access token in Bearer format
+ *
+ * @apiSuccess {String} message Success message
+ * @apiSuccess {Object[]} transactions List of pending transactions
+ * @apiSuccess {Number} transactions.id Transaction ID
+ * @apiSuccess {Number} transactions.userId User ID who requested
+ * @apiSuccess {Number} transactions.walletId Wallet ID
+ * @apiSuccess {Number} transactions.pointsRedeemed Points requested to redeem
+ * @apiSuccess {Number} transactions.amountRedeemed Amount requested
+ * @apiSuccess {String} transactions.phone User phone
+ * @apiSuccess {String} transactions.upiId User UPI ID
+ * @apiSuccess {String} transactions.status Transaction status (PENDING)
+ * @apiSuccess {Date} transactions.createdAt Creation date of the transaction
+ *
+ * @apiError {String} error Error message
+ */
+transactionRoute.get("/pending-transactions", verifyToken, listPendingTransactions);
 
 export default transactionRoute
