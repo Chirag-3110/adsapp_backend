@@ -349,3 +349,112 @@ export const userAnalytics = async (req: any, res: any) => {
     return buildErrorResponse(res, constants.errors.internalServerError, 500);
   }
 };
+
+export const getUserDashboard = async (req: any, res: any) => {
+  const connection = await db.getConnection();
+  try {
+    const userId = req.user.id;
+
+    const [rows] = await connection.query(
+      `SELECT * FROM Dashboard WHERE userId = ?`,
+      [userId]
+    );
+
+    let dashboard;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    if ((rows as any[]).length === 0) {
+      const [insertResult]: any = await connection.query(
+        `INSERT INTO Dashboard (userId, visitedDate, dailyAdClaimedDate) VALUES (?, ?, ?)`,
+        [userId, null, null]
+      );
+      dashboard = {
+        visitedToday: false,
+        adClaimedToday: false,
+      };
+    } else {
+      const record = (rows as any[])[0];
+
+      const visitedToday = record.visitedDate === todayStr;
+      const adClaimedToday = record.dailyAdClaimedDate === todayStr;
+
+      dashboard = {
+        visitedToday,
+        adClaimedToday,
+      };
+    }
+
+    return buildObjectResponse(res, {
+      message: 'User dashboard fetched successfully',
+      dashboard,
+    });
+
+  } catch (error: any) {
+    console.error('Error fetching user dashboard:', error);
+    return buildErrorResponse(res, constants.errors.internalServerError, 500);
+  } finally {
+    connection.release();
+  }
+};
+
+export const updateUserDashboard = async (req: any, res: any) => {
+  const connection = await db.getConnection();
+  try {
+    const userId = req.user.id;
+    const { keyName, points } = req.body;
+
+    if (!keyName || !['visitedDate', 'dailyAdClaimedDate'].includes(keyName)) {
+      return buildErrorResponse(res, 'Invalid keyName. Use visitedDate or dailyAdClaimedDate', 400);
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0]; 
+
+    const [rows] = await connection.query(
+      `SELECT * FROM Dashboard WHERE userId = ?`,
+      [userId]
+    );
+
+    if ((rows as any[]).length === 0) {
+      await connection.query(
+        `INSERT INTO Dashboard (userId, visitedDate, dailyAdClaimedDate) VALUES (?, ?, ?)`,
+        [userId, keyName === 'visitedDate' ? todayStr : null, keyName === 'dailyAdClaimedDate' ? todayStr : null]
+      );
+    } else {
+      const record = (rows as any[])[0];
+
+      if (record[keyName] === todayStr) {
+        return buildErrorResponse(res, `${keyName} is already updated today`, 400);
+      }
+
+      const sql = `UPDATE Dashboard SET ${keyName} = ? WHERE userId = ?`;
+      await connection.query(sql, [todayStr, userId]);
+    }
+
+    if (points && points > 0) {
+      const [walletRows] = await connection.query(`SELECT * FROM Wallet WHERE userId = ?`, [userId]);
+      if ((walletRows as any[]).length === 0) {
+        await connection.query(
+          `INSERT INTO Wallet (userId, totalPoints) VALUES (?, ?)`,
+          [userId, points]
+        );
+      } else {
+        await connection.query(
+          `UPDATE Wallet SET totalPoints = totalPoints + ? WHERE userId = ?`,
+          [points, userId]
+        );
+      }
+    }
+
+    return buildObjectResponse(res, {
+      message: `${keyName} updated successfully`,
+      dateUpdated: todayStr,
+      pointsAdded: points || 0,
+    });
+
+  } catch (error: any) {
+    console.error('Error updating dashboard:', error);
+    return buildErrorResponse(res, constants.errors.internalServerError, 500);
+  } finally {
+    connection.release();
+  }
+};

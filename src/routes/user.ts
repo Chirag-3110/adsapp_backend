@@ -1,5 +1,5 @@
 import express from 'express';
-import { createUser, deleteUser, getUserDetails, login, signupUser, updateUser, userAnalytics } from '../controller/user';
+import { createUser, deleteUser, getUserDashboard, getUserDetails, login, signupUser, updateUser, updateUserDashboard, userAnalytics } from '../controller/user';
 import { uploadProfileImage } from '../middleware/uploadMiddleware';
 const { verifyToken } = require('../middleware/auth');
 
@@ -142,5 +142,7 @@ userRoute.post("/signup", signupUser);
  * @apiError {String} error Error message
  */
 userRoute.get("/get-user-analytics", verifyToken, userAnalytics);
+userRoute.get("/get-user-dashboard", verifyToken, getUserDashboard);
+userRoute.put("/update-user-dashboard", verifyToken, updateUserDashboard);
 
 export default userRoute
