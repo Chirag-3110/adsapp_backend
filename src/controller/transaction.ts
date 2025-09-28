@@ -24,6 +24,11 @@ export const requestRedeemPoints = async (req: any, res: any) => {
       return buildErrorResponse(res, constants.errors.insufficiendFunds, 400);
     }
 
+    await connection.query(
+      `UPDATE Wallet SET totalPoints = totalPoints - ? WHERE walletId = ?`,
+      [pointsRedeemed, wallet.walletId]
+    );
+
     const insertTransactionSql = `
       INSERT INTO Transaction (userId, walletId, pointsRedeemed, amountRedeemed, phone, upiId, status)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -71,7 +76,19 @@ export const redeemPoints = async (req: any, res: any) => {
       return buildErrorResponse(res, "Transaction is already processed", 400);
     }
 
+    const [walletRows] = await connection.query("SELECT * FROM Wallet WHERE walletId = ?", [txn.walletId]);
+    const wallets = walletRows as any[];
+    if (wallets.length === 0) {
+      return buildErrorResponse(res, constants.errors.walletNotFound, 404);
+    }
+
+    const wallet = wallets[0];
+
     if (action === "CANCEL") {
+       await connection.query(
+        `UPDATE Wallet SET totalPoints = totalPoints + ? WHERE walletId = ?`,
+        [txn.pointsRedeemed, wallet.walletId]
+      );
       await connection.query("UPDATE Transaction SET status = ? WHERE transactionId = ?", ["CANCELLED", transactionId]);
       return buildObjectResponse(res, { message: "Transaction cancelled by admin" });
     }
@@ -79,25 +96,9 @@ export const redeemPoints = async (req: any, res: any) => {
     if (action === "APPROVE") {
       await connection.beginTransaction();
 
-      const [walletRows] = await connection.query("SELECT * FROM Wallet WHERE walletId = ?", [txn.walletId]);
-      const wallets = walletRows as any[];
-      if (wallets.length === 0) {
-        await connection.rollback();
-        return buildErrorResponse(res, constants.errors.walletNotFound, 404);
-      }
-
-      const wallet = wallets[0];
-
-      if (txn.pointsRedeemed > wallet.totalPoints) {
-        await connection.rollback();
-        return buildErrorResponse(res, constants.errors.insufficiendFunds, 400);
-      }
-
       await connection.query(
-        `UPDATE Wallet 
-         SET totalPoints = totalPoints - ?, totalAmountRedeemed = totalAmountRedeemed + ? 
-         WHERE walletId = ?`,
-        [txn.pointsRedeemed, txn.amountRedeemed, txn.walletId]
+        `UPDATE Wallet SET totalAmountRedeemed = totalAmountRedeemed + ? WHERE walletId = ?`,
+        [txn.amountRedeemed, wallet.walletId]
       );
 
       await connection.query("UPDATE Transaction SET status = ? WHERE transactionId = ?", ["COMPLETED", transactionId]);
@@ -118,7 +119,6 @@ export const redeemPoints = async (req: any, res: any) => {
 export const listTransactions = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
-
     const sql = `
       SELECT transactionId, pointsRedeemed, amountRedeemed, status, createdAt
       FROM Transaction
@@ -127,14 +127,14 @@ export const listTransactions = async (req: any, res: any) => {
     `;
 
     const [rows] = await db.query(sql, [userId]);
-    const earnings = rows as any[];
+    const transactions = rows as any[];
 
     return buildObjectResponse(res, {
-      message: constants.success.earningList,
-      earnings,
+      message: 'Transactions fetched successfully',
+      transactions,
     });
   } catch (error: any) {
-    console.error("Error fetching earnings:", error);
+    console.error("Error fetching transactions:", error);
     return buildErrorResponse(res, constants.errors.internalServerError, 500);
   }
 };
